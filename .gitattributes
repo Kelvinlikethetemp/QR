@@ -1,2 +1,680 @@
-# Auto detect text files and perform LF normalization
-* text=auto
+<title>Quiet Zone</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+
+<style>
+  :root {
+    --paper: #eeefea;
+    --paper-raised: #f7f7f3;
+    --ink: #15171a;
+    --ink-soft: #33363a;
+    --muted: #6b7269;
+    --line: #d2d5ce;
+    --line-strong: #b7bbb2;
+    --blueprint: #2b4fe0;
+    --blueprint-soft: #e4e9fb;
+    --warn: #a8501a;
+    --warn-soft: #f6e6da;
+    --focus: #2b4fe0;
+
+    --font-display: "IBM Plex Sans Condensed", "Arial Narrow", sans-serif;
+    --font-body: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #16181b;
+      --paper-raised: #1e2124;
+      --ink: #ecede8;
+      --ink-soft: #c7c9c3;
+      --muted: #8b9089;
+      --line: #34373a;
+      --line-strong: #45494c;
+      --blueprint: #7c95ff;
+      --blueprint-soft: #232a49;
+      --warn: #e39a5d;
+      --warn-soft: #3a2c1e;
+      --focus: #7c95ff;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #16181b;
+    --paper-raised: #1e2124;
+    --ink: #ecede8;
+    --ink-soft: #c7c9c3;
+    --muted: #8b9089;
+    --line: #34373a;
+    --line-strong: #45494c;
+    --blueprint: #7c95ff;
+    --blueprint-soft: #232a49;
+    --warn: #e39a5d;
+    --warn-soft: #3a2c1e;
+    --focus: #7c95ff;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--font-body);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap {
+    max-width: 1040px;
+    margin: 0 auto;
+    padding: 40px 24px 64px;
+  }
+
+  header.page {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    border-bottom: 1px solid var(--line-strong);
+    padding-bottom: 18px;
+    margin-bottom: 28px;
+  }
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  h1 {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: clamp(28px, 4vw, 38px);
+    letter-spacing: -0.01em;
+    margin: 2px 0 0;
+    text-wrap: balance;
+  }
+  .tagline {
+    font-size: 13px;
+    color: var(--muted);
+    max-width: 30ch;
+    text-align: right;
+    line-height: 1.45;
+  }
+
+  .board {
+    display: grid;
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+    gap: 28px;
+    align-items: start;
+  }
+  @media (max-width: 800px) {
+    .board { grid-template-columns: 1fr; }
+    .tagline { text-align: left; max-width: none; }
+  }
+
+  /* ---- shared panel chrome ---- */
+  .panel {
+    background: var(--paper-raised);
+    border: 1px solid var(--line);
+    border-radius: 3px;
+  }
+  .panel-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--line);
+  }
+  .panel-head .label {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 12px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+  .panel-body { padding: 18px 16px 20px; }
+
+  /* ---- content-type tabs ---- */
+  .tabs {
+    display: flex;
+    gap: 2px;
+    background: var(--line);
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    padding: 2px;
+    flex-wrap: wrap;
+  }
+  .tab {
+    flex: 1 1 auto;
+    appearance: none;
+    border: none;
+    background: transparent;
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 11.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 8px 10px;
+    border-radius: 2px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .tab:hover { color: var(--ink); }
+  .tab[aria-selected="true"] {
+    background: var(--paper-raised);
+    color: var(--blueprint);
+    box-shadow: 0 1px 0 rgba(0,0,0,0.04);
+  }
+  .tab:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+
+  .field-group { margin-top: 18px; display: grid; gap: 14px; }
+  .field { display: grid; gap: 6px; }
+  .field label {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .field input[type="text"],
+  .field input[type="tel"],
+  .field textarea,
+  .field select {
+    font-family: var(--font-body);
+    font-size: 14.5px;
+    color: var(--ink);
+    background: var(--paper);
+    border: 1px solid var(--line-strong);
+    border-radius: 2px;
+    padding: 9px 10px;
+    width: 100%;
+  }
+  .field textarea { resize: vertical; min-height: 64px; font-family: var(--font-body); }
+  .field input:focus-visible,
+  .field textarea:focus-visible,
+  .field select:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 1px;
+  }
+  .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 480px) { .field-row { grid-template-columns: 1fr; } }
+
+  hr.divider {
+    border: none;
+    border-top: 1px solid var(--line);
+    margin: 20px 0;
+  }
+
+  .style-row {
+    display: grid;
+    grid-template-columns: auto auto 1fr;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 16px;
+  }
+  .swatch-field { display: flex; align-items: center; gap: 8px; }
+  .swatch-field label {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  input[type="color"] {
+    width: 34px; height: 28px;
+    border: 1px solid var(--line-strong);
+    border-radius: 2px;
+    padding: 0;
+    background: none;
+    cursor: pointer;
+  }
+  input[type="range"] {
+    width: 100%;
+    accent-color: var(--blueprint);
+  }
+  .size-readout {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--muted);
+    justify-self: end;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .ecc-group { display: grid; gap: 8px; }
+  .ecc-options {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+  }
+  .ecc-opt {
+    appearance: none;
+    border: 1px solid var(--line-strong);
+    background: var(--paper);
+    border-radius: 2px;
+    padding: 8px 4px;
+    text-align: center;
+    cursor: pointer;
+    font-family: var(--font-mono);
+  }
+  .ecc-opt .lvl { display: block; font-size: 15px; font-weight: 500; color: var(--ink); }
+  .ecc-opt .pct { display: block; font-size: 10px; color: var(--muted); margin-top: 2px; }
+  .ecc-opt[aria-pressed="true"] {
+    border-color: var(--blueprint);
+    background: var(--blueprint-soft);
+  }
+  .ecc-opt[aria-pressed="true"] .lvl { color: var(--blueprint); }
+  .ecc-opt:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+  .ecc-help {
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.5;
+    min-height: 2.7em;
+  }
+
+  .warning-chip {
+    display: none;
+    align-items: flex-start;
+    gap: 8px;
+    margin-top: 16px;
+    padding: 9px 11px;
+    background: var(--warn-soft);
+    border: 1px solid var(--warn);
+    border-radius: 2px;
+    font-size: 12.5px;
+    color: var(--ink-soft);
+    line-height: 1.5;
+  }
+  .warning-chip.show { display: flex; }
+  .warning-chip svg { flex: none; margin-top: 2px; color: var(--warn); }
+
+  /* ---- preview / proof panel ---- */
+  .proof-stage {
+    padding: 30px 20px 22px;
+    display: flex;
+    justify-content: center;
+  }
+  .proof-card {
+    position: relative;
+    background: #ffffff;
+    padding: 34px;
+    border-radius: 2px;
+  }
+  .proof-card::before,
+  .proof-card::after,
+  .proof-card .cm2,
+  .proof-card .cm3 {
+    content: "";
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    pointer-events: none;
+  }
+  .proof-card::before { top: -8px; left: -8px; border-top: 1px solid var(--line-strong); border-left: 1px solid var(--line-strong); }
+  .proof-card::after { top: -8px; right: -8px; border-top: 1px solid var(--line-strong); border-right: 1px solid var(--line-strong); }
+  .proof-card .cm2 { bottom: -8px; left: -8px; border-bottom: 1px solid var(--line-strong); border-left: 1px solid var(--line-strong); }
+  .proof-card .cm3 { bottom: -8px; right: -8px; border-bottom: 1px solid var(--line-strong); border-right: 1px solid var(--line-strong); }
+
+  #qr-canvas {
+    display: block;
+    image-rendering: pixelated;
+    transition: opacity 120ms ease;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    #qr-canvas { transition: none; }
+  }
+
+  .readout {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.03em;
+    color: var(--muted);
+    text-align: center;
+    padding: 14px 16px 4px;
+    border-top: 1px solid var(--line);
+    font-variant-numeric: tabular-nums;
+  }
+  .readout b { color: var(--ink-soft); font-weight: 500; }
+
+  .save-hint {
+    padding: 12px 16px 18px;
+    text-align: center;
+    font-size: 12.5px;
+    color: var(--muted);
+  }
+  .save-hint kbd {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    border: 1px solid var(--line-strong);
+    border-bottom-width: 2px;
+    border-radius: 2px;
+    padding: 1px 5px;
+    background: var(--paper);
+    color: var(--ink-soft);
+  }
+
+  footer.note {
+    margin-top: 26px;
+    font-size: 12px;
+    color: var(--muted);
+    text-align: center;
+  }
+</style>
+
+<div class="wrap">
+
+  <header class="page">
+    <div>
+      <div class="eyebrow">Encoder / Print Proof</div>
+      <h1>Quiet Zone</h1>
+    </div>
+    <p class="tagline">Builds a QR code entirely in your browser — nothing you type here is sent anywhere.</p>
+  </header>
+
+  <main class="board">
+
+    <!-- INPUT PANEL -->
+    <section class="panel">
+      <div class="panel-head"><span class="label">Content</span></div>
+      <div class="panel-body">
+
+        <div class="tabs" role="tablist" aria-label="Content type">
+          <button class="tab" role="tab" data-type="url" aria-selected="true">Link</button>
+          <button class="tab" role="tab" data-type="text" aria-selected="false">Text</button>
+          <button class="tab" role="tab" data-type="wifi" aria-selected="false">Wi-Fi</button>
+          <button class="tab" role="tab" data-type="email" aria-selected="false">Email</button>
+          <button class="tab" role="tab" data-type="phone" aria-selected="false">Phone</button>
+        </div>
+
+        <!-- URL fields -->
+        <div class="field-group" data-panel="url">
+          <div class="field">
+            <label for="url-value">Destination link</label>
+            <input type="text" id="url-value" value="https://example.com" placeholder="https://example.com" inputmode="url">
+          </div>
+        </div>
+
+        <!-- TEXT fields -->
+        <div class="field-group" data-panel="text" hidden>
+          <div class="field">
+            <label for="text-value">Message</label>
+            <textarea id="text-value" placeholder="Anything you like — plain text goes straight into the code.">Quiet zone — the blank border a scanner needs to find the edges. Scan me!</textarea>
+          </div>
+        </div>
+
+        <!-- WIFI fields -->
+        <div class="field-group" data-panel="wifi" hidden>
+          <div class="field">
+            <label for="wifi-ssid">Network name (SSID)</label>
+            <input type="text" id="wifi-ssid" value="GuestNetwork">
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label for="wifi-password">Password</label>
+              <input type="text" id="wifi-password" value="letmein123">
+            </div>
+            <div class="field">
+              <label for="wifi-security">Security</label>
+              <select id="wifi-security">
+                <option value="WPA" selected>WPA / WPA2</option>
+                <option value="WEP">WEP</option>
+                <option value="nopass">None (open)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- EMAIL fields -->
+        <div class="field-group" data-panel="email" hidden>
+          <div class="field">
+            <label for="email-to">Recipient</label>
+            <input type="text" id="email-to" value="hello@example.com" inputmode="email">
+          </div>
+          <div class="field">
+            <label for="email-subject">Subject</label>
+            <input type="text" id="email-subject" value="Hello">
+          </div>
+          <div class="field">
+            <label for="email-body">Body</label>
+            <textarea id="email-body" placeholder="(optional)"></textarea>
+          </div>
+        </div>
+
+        <!-- PHONE fields -->
+        <div class="field-group" data-panel="phone" hidden>
+          <div class="field">
+            <label for="phone-value">Phone number</label>
+            <input type="tel" id="phone-value" value="+1 555 0100">
+          </div>
+        </div>
+
+        <hr class="divider">
+
+        <div class="style-row">
+          <div class="swatch-field">
+            <label for="fg-color">Code</label>
+            <input type="color" id="fg-color" value="#15171a">
+          </div>
+          <div class="swatch-field">
+            <label for="bg-color">Ground</label>
+            <input type="color" id="bg-color" value="#ffffff">
+          </div>
+          <div></div>
+        </div>
+
+        <div class="field" style="margin-bottom: 18px;">
+          <label for="size-range">Print size</label>
+          <div style="display:flex; align-items:center; gap:10px;">
+            <input type="range" id="size-range" min="240" max="640" step="20" value="360">
+            <span class="size-readout" id="size-readout">360 px</span>
+          </div>
+        </div>
+
+        <div class="ecc-group">
+          <label style="font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted);">Error correction</label>
+          <div class="ecc-options" role="group" aria-label="Error correction level">
+            <button class="ecc-opt" data-ecc="L" aria-pressed="false"><span class="lvl">L</span><span class="pct">~7%</span></button>
+            <button class="ecc-opt" data-ecc="M" aria-pressed="true"><span class="lvl">M</span><span class="pct">~15%</span></button>
+            <button class="ecc-opt" data-ecc="Q" aria-pressed="false"><span class="lvl">Q</span><span class="pct">~25%</span></button>
+            <button class="ecc-opt" data-ecc="H" aria-pressed="false"><span class="lvl">H</span><span class="pct">~30%</span></button>
+          </div>
+          <p class="ecc-help" id="ecc-help"></p>
+        </div>
+
+        <div class="warning-chip" id="contrast-warning">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 1.5 15 14H1L8 1.5Z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M8 6v3.4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><circle cx="8" cy="11.6" r="0.9" fill="currentColor"/></svg>
+          <span>Low contrast between code and ground — this may not scan reliably, especially in poor light.</span>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- PREVIEW / PROOF PANEL -->
+    <section class="panel">
+      <div class="panel-head">
+        <span class="label">Print Proof</span>
+      </div>
+      <div class="proof-stage">
+        <div class="proof-card">
+          <span class="cm2"></span><span class="cm3"></span>
+          <canvas id="qr-canvas" width="360" height="360"></canvas>
+        </div>
+      </div>
+      <div class="readout" id="readout">— MODULES · VERSION — · ECC — · — BYTES</div>
+      <div class="save-hint">Right-click (or press and hold on mobile) the code above → <b>Save Image As…</b></div>
+    </section>
+
+  </main>
+
+  <footer class="note">Quiet zone, error correction and module count are the same terms a print shop or packaging vendor will use if you hand this off to them.</footer>
+
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var state = { type: "url", ecc: "M" };
+
+  var ECC_INFO = {
+    L: "Smallest code. Fine for a clean digital screen or a large, well-protected print.",
+    M: "Good default for most flyers, labels, and signage.",
+    Q: "Holds up better outdoors or on less-than-ideal print stock.",
+    H: "Most resilient — use this if you're adding a logo on top of the code."
+  };
+
+  var tabs = Array.prototype.slice.call(document.querySelectorAll(".tab"));
+  var panels = {
+    url: document.querySelector('[data-panel="url"]'),
+    text: document.querySelector('[data-panel="text"]'),
+    wifi: document.querySelector('[data-panel="wifi"]'),
+    email: document.querySelector('[data-panel="email"]'),
+    phone: document.querySelector('[data-panel="phone"]')
+  };
+
+  tabs.forEach(function (tab) {
+    tab.addEventListener("click", function () {
+      tabs.forEach(function (t) { t.setAttribute("aria-selected", "false"); });
+      tab.setAttribute("aria-selected", "true");
+      state.type = tab.getAttribute("data-type");
+      Object.keys(panels).forEach(function (k) {
+        panels[k].hidden = k !== state.type;
+      });
+      render();
+    });
+  });
+
+  var eccButtons = Array.prototype.slice.call(document.querySelectorAll(".ecc-opt"));
+  eccButtons.forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      eccButtons.forEach(function (b) { b.setAttribute("aria-pressed", "false"); });
+      btn.setAttribute("aria-pressed", "true");
+      state.ecc = btn.getAttribute("data-ecc");
+      render();
+    });
+  });
+
+  function escapeWifi(s) {
+    return String(s).replace(/([\\;,:"])/g, "\\$1");
+  }
+
+  function buildPayload() {
+    switch (state.type) {
+      case "url": {
+        var v = document.getElementById("url-value").value.trim();
+        if (v && !/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(v)) v = "https://" + v;
+        return v;
+      }
+      case "text":
+        return document.getElementById("text-value").value;
+      case "wifi": {
+        var ssid = escapeWifi(document.getElementById("wifi-ssid").value);
+        var pass = escapeWifi(document.getElementById("wifi-password").value);
+        var sec = document.getElementById("wifi-security").value;
+        if (sec === "nopass") return "WIFI:T:nopass;S:" + ssid + ";;";
+        return "WIFI:T:" + sec + ";S:" + ssid + ";P:" + pass + ";;";
+      }
+      case "email": {
+        var to = document.getElementById("email-to").value.trim();
+        var subject = encodeURIComponent(document.getElementById("email-subject").value);
+        var body = encodeURIComponent(document.getElementById("email-body").value);
+        var q = [];
+        if (subject) q.push("subject=" + subject);
+        if (body) q.push("body=" + body);
+        return "mailto:" + to + (q.length ? "?" + q.join("&") : "");
+      }
+      case "phone": {
+        var raw = document.getElementById("phone-value").value.trim();
+        var cleaned = raw.replace(/(?!^\+)[^\d]/g, "");
+        return "tel:" + cleaned;
+      }
+    }
+    return "";
+  }
+
+  function relLuminance(hex) {
+    var c = hex.replace("#", "");
+    var r = parseInt(c.substr(0, 2), 16) / 255;
+    var g = parseInt(c.substr(2, 2), 16) / 255;
+    var b = parseInt(c.substr(4, 2), 16) / 255;
+    [r, g, b] = [r, g, b].map(function (v) {
+      return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+    });
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  }
+
+  function contrastRatio(hexA, hexB) {
+    var La = relLuminance(hexA), Lb = relLuminance(hexB);
+    var lighter = Math.max(La, Lb), darker = Math.min(La, Lb);
+    return (lighter + 0.05) / (darker + 0.05);
+  }
+
+  var ECC_PERCENT = { L: 7, M: 15, Q: 25, H: 30 };
+
+  function render() {
+    var payload = buildPayload();
+    var fg = document.getElementById("fg-color").value;
+    var bg = document.getElementById("bg-color").value;
+    var size = parseInt(document.getElementById("size-range").value, 10);
+
+    document.getElementById("size-readout").textContent = size + " px";
+    document.getElementById("ecc-help").textContent = ECC_INFO[state.ecc];
+
+    var ratio = contrastRatio(fg, bg);
+    document.getElementById("contrast-warning").classList.toggle("show", ratio < 3);
+
+    var canvas = document.getElementById("qr-canvas");
+    var ctx = canvas.getContext("2d");
+    var readout = document.getElementById("readout");
+
+    var text = payload && payload.length ? payload : " ";
+
+    var qr;
+    try {
+      qr = qrcode(0, state.ecc);
+      qr.addData(text);
+      qr.make();
+    } catch (e) {
+      readout.textContent = "TOO MUCH DATA FOR ONE CODE — SHORTEN IT";
+      return;
+    }
+
+    var count = qr.getModuleCount();
+    var quiet = 4; // modules — the minimum quiet zone the QR spec calls for
+    var totalModules = count + quiet * 2;
+    var moduleSize = size / totalModules;
+
+    canvas.width = size;
+    canvas.height = size;
+    canvas.style.width = size + "px";
+    canvas.style.height = size + "px";
+
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, size, size);
+    ctx.fillStyle = fg;
+    for (var r = 0; r < count; r++) {
+      for (var c = 0; c < count; c++) {
+        if (qr.isDark(r, c)) {
+          var x = (c + quiet) * moduleSize;
+          var y = (r + quiet) * moduleSize;
+          ctx.fillRect(Math.floor(x), Math.floor(y), Math.ceil(moduleSize), Math.ceil(moduleSize));
+        }
+      }
+    }
+
+    var version = Math.round((count - 17) / 4);
+    var bytes = new TextEncoder().encode(payload || "").length;
+    readout.innerHTML = "<b>" + count + "×" + count + "</b> MODULES &middot; VERSION <b>" + version +
+      "</b> &middot; ECC <b>" + state.ecc + " " + ECC_PERCENT[state.ecc] + "%</b> &middot; <b>" + bytes + "</b> BYTES";
+  }
+
+  // wire up all inputs to re-render live
+  document.querySelectorAll("input, textarea, select").forEach(function (el) {
+    el.addEventListener("input", render);
+  });
+
+  render();
+})();
+</script>
+
